@@ -1,9 +1,14 @@
+
 namespace SpriteKind {
     export const p1atk = SpriteKind.create()
     export const p2atk = SpriteKind.create()
     export const p1body = SpriteKind.create()
     export const p2body = SpriteKind.create()
 }
+namespace 人物{}
+namespace 技能{}
+namespace 弹射物{}
+namespace 动画{}
 namespace myGame{
     export let g = 200
     export enum PlayerKind{
@@ -156,6 +161,20 @@ namespace myGame{
         three
     }
 
+    export enum HPMP{
+        HP,
+        MP,
+        x,
+        y
+    }
+
+    export enum ME{
+        //% block="精灵"
+        M,
+        //% block="敌方精灵"
+        E
+    }
+
     //重叠消亡 k(collision): 0=>未碰撞/超时重置, 1=>子弹碰子弹, 2=>子弹碰人; v: 碰撞存活优先级
     function perish(sprite: wave, k: number, v: number){
         sprite.collision = k
@@ -212,9 +231,9 @@ namespace myGame{
         }
     }
 
-    //let myCharacters: {c: myCharacter, name: string}[] = []
     let myCharacters: { [key: string]: myCharacter; } = {}
     //%block
+    //%blockNamespace=人物 color="#6A6FEA"
     //%group="自定义人物"
     //%blockId=basicSet block="自定义人物 %img=screen_image_picker 命名为 %name"
     //%str.defl=SkillKind.A mp.defl=0
@@ -236,6 +255,7 @@ namespace myGame{
     let curSkillPlayer: Character
 
     //%block
+    //%blockNamespace=技能 color="#B6392F"
     //%group="技能设置"
     //%blockId=skillSet block="自定义人物 %name 技能"
     //%str.defl=SkillKind.A mp.defl=0
@@ -251,6 +271,7 @@ namespace myGame{
     }
 
     /*//%block
+    //%blockNamespace=人物 color="#6A6FEA"
     //%group="自定义人物"
     //%blockId=exportCharacter block="导出人物 %name"
     export */
@@ -268,10 +289,10 @@ namespace myGame{
     }
 
     //%block
+    //%blockNamespace=技能 color="#111111"
     //%group="分隔符"
     //%blockId=bar block="块间分隔标记 %s"
     //%weight=89
-    //%color=2
     export function bar(s: string){
 
     }
@@ -315,6 +336,63 @@ namespace myGame{
 
 //=================== 自定义弹射物 ===================
 
+    //------------- 弹射物注册/定义 -------------
+    export class myProjectile{
+        img: Image
+        cb: (projectile: wave)=>void
+        constructor(){
+            this.img = img`
+                .
+            `
+            this.cb = ()=>{}
+        }
+    }
+
+    let projectiles: { [key: string]: myProjectile; } = {}
+
+    //%block
+    //%group="自定义弹射物"
+    //%blockNamespace=弹射物
+    //%blockId=setProjectiles block="自定义弹射物集合 标记名为%name"
+    //%weight=100
+    //%afterOnStart=true
+    export function setProjectiles(name:string, cb:()=>void){
+        cb()
+    }
+
+    //%block
+    //%group="自定义弹射物"
+    //%blockNamespace=弹射物
+    //%blockId=strProjectiles block="弹射物名称 %name"
+    //%weight=98
+    //%blockSetVariable=projectileName
+    export function strProjectiles(name: string){
+        return name
+    }
+
+    //%block
+    //%group="自定义弹射物"
+    //%blockNamespace=弹射物
+    //%blockId=setProjectile block="设置弹射物 %img=screen_image_picker 命名为%name"
+    //%weight=81
+    //%inlineInputMode=inline
+    //%draggableParameters="projectile"
+    //% topblock=false
+    //% handlerStatement=true
+    //%afterOnStart=true
+    export function setProjectile(img: Image, name:string, cb:(projectile: wave)=>void){
+        if(projectiles[name] != undefined){
+            console.log("定义弹射物时发生弹射物命名冲突："+name)
+            return
+        }
+        let bullet = new myProjectile
+        bullet.img = img
+        bullet.cb = cb;
+        //projectiles.push({p:bullet, name:name})
+        projectiles[name] = bullet
+    }
+
+    //------------- 扩展弹射物 -------------
     export class wave extends Sprite{
         damage = 1 //伤害
         hurted = 1 //攻击轻重,越大越容易击倒
@@ -362,14 +440,75 @@ namespace myGame{
     }
 
     //%block
-    //% group="自定义弹射物"
+    //%group="属性"
+    //%blockNamespace=弹射物
+    //%blockId=setBullet block="设置弹射物%b=variables_get(projectile) 属性 %k=bulletP 为 %v"
+    //%v.defl=0
+    //%weight=78
+    export function setBullet(b:wave, k: bulletP, v: number){
+        if(k == bulletP.damage){
+            b.damage = v
+        }
+        else if(k == bulletP.hitrec){
+            b.hitrec = v
+        }
+        else if(k == bulletP.hurted){
+            b.hurted = v
+        }
+        else if(k == bulletP.xspeed){
+            b.xspeed = v
+        }
+        else if(k == bulletP.yspeed){
+            b.yspeed = v
+        }
+        else if(k == bulletP.perishTogether){
+            b.perishTogether = Math.min(v, 99)
+        }
+    }
+
+    //%block
+    //%group="属性"
+    //%blockNamespace=弹射物
+    //%blockId=setBullet2 block="设置弹射物%b=variables_get(projectile) 特性 %k=bulletP2 为 %v=toggleOnOff"
+    //%v.defl=true
+    //%weight=78
+    export function setBullet2(b:wave, k: bulletP2, v: boolean){
+        if(k == bulletP2.breakdef){
+            b.breakdef = v
+        }
+        else if(k == bulletP2.rebound){
+            b.rebound = v
+        }
+        else if(k == bulletP2.indeflectible){
+            b.indeflectible = v
+        }
+        else if(k == bulletP2.attachPlayer){
+            b.attachOwner = v
+            if(v){
+                b.own.attachBullet.push(b)
+            }
+            else {
+                for(let i = 0; i < b.own.attachBullet.length; ++i){
+                    if(b.own.attachBullet[i] == b){
+                        b.own.attachBullet.removeAt(i)
+                        break
+                    }
+                }
+            }
+        }
+    }
+
+    //%block
+    //% group="参数"
+    //%blockNamespace=弹射物
     //%blockId=isDestroyed block="%b=variables_get(projectile) 已销毁"
     export function isDestroyed(b: wave): boolean{
         return b.isDestroyed
     }
 
     //%block
-    //% group="自定义弹射物"
+    //% group="参数"
+    //%blockNamespace=弹射物
     //%blockId=projectileOwner block="%b=variables_get(projectile) 的所有者"
     //%weight=99
     export function projectileOwner(b: wave): Character {
@@ -377,7 +516,8 @@ namespace myGame{
     }
 
     //%block
-    //%group="自定义弹射物"
+    //%group="参数"
+    //%blockNamespace=弹射物
     //%blockId=blankprojectile block="%p=variables_get(player) 的弹射物"
     //%weight=99
     export function blankprojectile(p: Character): wave{
@@ -390,7 +530,8 @@ namespace myGame{
     }
 
     //%block
-    //%group="自定义弹射物"
+    //%group="参数"
+    //%blockNamespace=弹射物
     //%blockId=spriteToWave block="将精灵 %b=variables_get(sprite) 转化为弹射物"
     //%weight=100
     export function spriteToWave(b: Sprite): wave{
@@ -447,6 +588,7 @@ export let animations: { [key: string]: projectileAnimation; } = {}
 
 //%block
 //%group="自定义动画"
+//%blockNamespace=动画 color="#BCE190"
 //%blockId=defAnimation block="自定义动画集合"
 //%weight=100
 //%afterOnStart=true
@@ -457,6 +599,7 @@ export function defAnimation(f: ()=>void){
 
 //%block
 //%group="自定义动画"
+//%blockNamespace=动画 color="#BCE190"
 //%blockId=setAnimation block="自定义动画 %anim=animation_editor 命名为%name|| 每帧间隔%interval ms 下一动画%next"
 //%weight=99
 //%interval.defl=100 
@@ -472,6 +615,7 @@ export function setAnimation(anim: Image[], name: string, interval: number = 100
 
 //%block
 //%group="自定义动画"
+//%blockNamespace=动画 color="#BCE190"
 //%blockId=runAnimation block="%sprite=variables_get(projectile) 播放动画 %name|| 跟随%follow=toggleOnOff 循环播放%loop=toggleOnOff"
 //%weight=98
 //%inlineInputMode=inline
@@ -504,6 +648,7 @@ export function runAnimation(sprite: Sprite, name: string, follow = false, loop 
 
 //%block
 //%group="自定义动画"
+//%blockNamespace=动画 color="#BCE190"
 //%blockId=runAnimationAt block="播放动画 %name 在x%x y%y|| 循环播放%loop=toggleOnOff"
 //%weight=97
 //%inlineInputMode=inline
@@ -931,55 +1076,35 @@ function _runAnimation(name: string, loop: boolean = false){
             . . . . . . . . . f f . . . . .
         `
         ]
-
-        //% group="人物参数" blockSetVariable="player"
-        //% blockCombine block="精灵" callInDebugger
-        //%weight=80
+        
         get sprite(): Sprite {
             return this.mySprite
         }
 
-        //% group="人物参数" blockSetVariable="player"
-        //% blockCombine block="敌方精灵" callInDebugger
-        //%weight=80
         get enemy(): Sprite {
             return this.enemySprite
         }
 
-        //% group="人物参数" blockSetVariable="player"
-        //% blockCombine block="x" callInDebugger
-        //%weight=81
         get x(): number {
             return this.mySprite.x
         }
 
-        //% group="人物参数" blockSetVariable="player"
-        //% blockCombine block="y" callInDebugger
-        //%weight=81
         get y(): number {
             return this.mySprite.y
         }
 
-        //% group="人物参数" blockSetVariable="player"
-        //% blockCombine block="血量" callInDebugger
         get hp(): number {
             return this.statusbar.value
         }
 
-        //% group="人物参数" blockSetVariable="player"
-        //% blockCombine block="mp" callInDebugger
         get mp(): number {
             return this.mpbar.value
         }
 
-        //% group="人物参数" blockSetVariable="player"
-        //% blockCombine block="血量" callInDebugger
         set hp(v : number) {
             this.statusbar.value = v
         }
 
-        //% group="人物参数" blockSetVariable="player"
-        //% blockCombine block="mp" callInDebugger
         set mp(v : number) {
             this.mpbar.value = v
         }
@@ -2293,7 +2418,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="技能设置"
+    //%blockNamespace=技能 color="#B6392F"
+    //%group="临时变量"
     //%blockId=getTempVar block="获取临时变量 %t=variables_get(tempVar) %key"
     //%weight=89
     export function getVal(tempVar: tempVarDic, key: string){
@@ -2301,7 +2427,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="技能设置"
+    //%blockNamespace=技能 color="#B6392F"
+    //%group="临时变量"
     //%blockId=addTempVar block="设置临时变量 %t=variables_get(tempVar) %key = %val"
     //%weight=89
     export function add(tempVar: tempVarDic, key: string, val: number){
@@ -2309,7 +2436,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="技能设置"
+    //%blockNamespace=技能 color="#B6392F"
+    //%group="临时变量"
     //%blockId=getTempVar2 block="获取临时弹射物 %t=variables_get(tempVar) %key"
     //%weight=88
     export function getVal2(tempVar: tempVarDic, key: string){
@@ -2317,7 +2445,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="技能设置"
+    //%blockNamespace=技能 color="#B6392F"
+    //%group="临时变量"
     //%blockId=addTempVar2 block="设置临时弹射物 %t=variables_get(tempVar) %key 为 %val=variables_get(projectile)"
     //%weight=88
     export function add2(tempVar: tempVarDic, key: string, val: wave){
@@ -2325,7 +2454,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="技能设置"
+    //%blockNamespace=技能 color="#B6392F"
+    //%group="临时变量"
     //%blockId=updateTempVar block="以幅度 %val 修改临时变量 %t=variables_get(tempVar) %key"
     //%weight=89
     export function updateVar(val: number, tempVar: tempVarDic, key: string, ){
@@ -2336,6 +2466,7 @@ function _runAnimation(name: string, loop: boolean = false){
     //------------ 临时变量end ------------
 
     //%block
+    //%blockNamespace=技能 color="#B6392F"
     //%group="技能设置"
     //%afterOnStart=true
     //%blockId=setSkill block="设置技能 %player=variables_get(player) %str=SkillKind 消耗mp %mp"
@@ -2386,6 +2517,7 @@ function _runAnimation(name: string, loop: boolean = false){
 
     //默认技能
     //%block
+    //%blockNamespace=技能 color="#B6392F"
     //%group="技能设置"
     //%blockId=defaultSkill block="使用默认技能 %player=variables_get(player)"
     //%str.defl=SkillKind.A
@@ -2422,7 +2554,9 @@ function _runAnimation(name: string, loop: boolean = false){
 
     //% blockId=cbpromisethen block="after %delay s then" 
     //% topblock=false
-    //% group="自定义弹射物"
+    //% group="魔法"
+    //%color="#BCE1F0"
+    //% blockNamespace=弹射物
     //% handlerStatement=true
     //% draggableParameters="reporter"
     //% weight=79
@@ -2431,7 +2565,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //% blockId=cbpromiseinvoke block="invoke" 
-    //% group="自定义弹射物"
+    //% group="动作"
+    //%blockNamespace=弹射物
     function invoke() {
         const _currentRequest = currentRequest
         control.runInParallel(() => {
@@ -2444,66 +2579,14 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     let currentRequest:Request = null;
-    
-//=================== 弹射物 ===================
-
-    export class myProjectile{
-        img: Image
-        cb: (projectile: wave)=>void
-        constructor(){
-            this.img = img`
-                .
-            `
-            this.cb = ()=>{}
-        }
-    }
-
-    let projectiles: { [key: string]: myProjectile; } = {}
+    /////
 
     //%block
-    //%group="自定义弹射物"
-    //%blockId=setProjectiles block="自定义弹射物集合 标记名为%name"
-    //%weight=100
-    //%afterOnStart=true
-    export function setProjectiles(name:string, cb:()=>void){
-        cb()
-    }
-
-    //%block
-    //%group="自定义弹射物"
-    //%blockId=strProjectiles block="弹射物名称 %name"
-    //%weight=98
-    //%blockSetVariable=projectileName
-    export function strProjectiles(name: string){
-        return name
-    }
-
-    //%block
-    //%group="自定义弹射物"
-    //%blockId=setProjectile block="设置弹射物 %img=screen_image_picker 命名为%name"
-    //%weight=81
-    //%inlineInputMode=inline
-    //%draggableParameters="projectile"
-    //% topblock=false
-    //% handlerStatement=true
-    //%afterOnStart=true
-    export function setProjectile(img: Image, name:string, cb:(projectile: wave)=>void){
-        if(projectiles[name] != undefined){
-            console.log("定义弹射物时发生弹射物命名冲突："+name)
-            return
-        }
-        let bullet = new myProjectile
-        bullet.img = img
-        bullet.cb = cb;
-        //projectiles.push({p:bullet, name:name})
-        projectiles[name] = bullet
-    }
-
-    //%block
-    //%group="技能设置"
+    //%blockNamespace=技能 color="#B6392F"
+    //%group="动作"
     //%blockId=shoot2 block="%p=variables_get(player) 发射弹射物 %name 从x $x y $y ||朝向角度 $a 速率 $s 与发射点到距离 $d"
     //%a.defl=180 s.defl=50 x.defl=0 y.defl=0  d.defl=0
-    //%weight=81
+    //%weight=99
     //%inlineInputMode=inline
     export function shoot2(p: Character, name: string, x: number, y: number, 
         a: number = 180, s: number = 50, d: number = 0){
@@ -2534,8 +2617,9 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="自定义弹射物"
-    //%blockId=splitshoot block="(空爆) %p=variables_get(projectile) 射出 %name || 偏移x %x y %y朝向角度 $a 速率 $s 与发射点到距离 $d"
+    //%group="特殊效果"
+    //%blockNamespace=弹射物
+    //%blockId=splitshoot block="(空爆) %p=variables_get(projectile) 射出 弹射物%name || 偏移x %x y %y朝向角度 $a 速率 $s 与发射点到距离 $d"
     //%a.defl=180 x.defl=0 y.defl=0 s.defl=50 d.defl=0
     //%weight=78
     //%inlineInputMode=inline
@@ -2572,8 +2656,9 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="自定义弹射物"
-    //%blockId=tailshoot block="(尾焰) %p=variables_get(projectile) 每隔%t ms 产生尾焰 %anim"
+    //%group="特殊效果"
+    //%blockNamespace=弹射物
+    //%blockId=tailshoot block="(尾焰) %p=variables_get(projectile) 每隔%t ms 产生动画 %anim"
     //%t.defl=100
     //%weight=77
     //%inlineInputMode=inline
@@ -2588,7 +2673,8 @@ function _runAnimation(name: string, loop: boolean = false){
 
     //% blockId=overlapAct block="(地雷) %p=variables_get(projectile) 被 %k=overlapKind 触碰后" 
     //% topblock=false
-    //% group="自定义弹射物"
+    //% group="特殊效果"
+    //%blockNamespace=弹射物
     //% handlerStatement=true
     //% k.defl=overlapKind.three
     //% draggableParameters="reporter"
@@ -2608,7 +2694,8 @@ function _runAnimation(name: string, loop: boolean = false){
 
     //% blockId=bulletInterval block="每隔%t 秒 持续执行 直到 %p=variables_get(projectile) 消亡" 
     //% topblock=false
-    //% group="自定义弹射物"
+    //% group="特殊效果"
+    //%blockNamespace=弹射物
     //% handlerStatement=true
     //% draggableParameters="reporter"
     //% weight=75
@@ -2625,7 +2712,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="自定义弹射物"
+    //%group="特殊效果"
+    //%blockNamespace=弹射物
     //%blockId=setBlastAnim block="设定 %sprite=variables_get(projectile) 爆炸动画 %anim"
     //%inlineInputMode=inline
     //%interval.defl=100
@@ -2634,65 +2722,9 @@ function _runAnimation(name: string, loop: boolean = false){
         b.blastAnim = anim
     }
 
-    //%block
-    //%group="自定义弹射物"
-    //%blockId=setBullet block="设置弹射物%b=variables_get(projectile) 属性 %k=bulletP 为 %v"
-    //%v.defl=0
-    //%weight=78
-    export function setBullet(b:wave, k: bulletP, v: number){
-        if(k == bulletP.damage){
-            b.damage = v
-        }
-        else if(k == bulletP.hitrec){
-            b.hitrec = v
-        }
-        else if(k == bulletP.hurted){
-            b.hurted = v
-        }
-        else if(k == bulletP.xspeed){
-            b.xspeed = v
-        }
-        else if(k == bulletP.yspeed){
-            b.yspeed = v
-        }
-        else if(k == bulletP.perishTogether){
-            b.perishTogether = Math.min(v, 99)
-        }
-    }
-
-    //%block
-    //%group="自定义弹射物"
-    //%blockId=setBullet2 block="设置弹射物%b=variables_get(projectile) 特殊效果 %k=bulletP2 为 %v=toggleOnOff"
-    //%v.defl=true
-    //%weight=78
-    export function setBullet2(b:wave, k: bulletP2, v: boolean){
-        if(k == bulletP2.breakdef){
-            b.breakdef = v
-        }
-        else if(k == bulletP2.rebound){
-            b.rebound = v
-        }
-        else if(k == bulletP2.indeflectible){
-            b.indeflectible = v
-        }
-        else if(k == bulletP2.attachPlayer){
-            b.attachOwner = v
-            if(v){
-                b.own.attachBullet.push(b)
-            }
-            else {
-                for(let i = 0; i < b.own.attachBullet.length; ++i){
-                    if(b.own.attachBullet[i] == b){
-                        b.own.attachBullet.removeAt(i)
-                        break
-                    }
-                }
-            }
-        }
-    }
-
     // 自机狙
-    //%group="自定义弹射物"
+    //%group="行为/轨迹"
+    //%blockNamespace=弹射物
     //%blockId=aimedshot block="(自机狙) %bullet=variables_get(projectile) 转向敌方 ||转向速率 %time"
     //%time.defl=573
     export function aimedshot(bullet: wave, time: number = 573){
@@ -2733,7 +2765,8 @@ function _runAnimation(name: string, loop: boolean = false){
 
 
     //%block
-    //%group="自定义弹射物"
+    //%group="行为/轨迹"
+    //%blockNamespace=弹射物
     //%blockId=turnTo block="偏移 %p=variables_get(projectile) 转向角度 %angel ||速率%v"
     //%angel.defl=0 v.defl=1146
     //%inlineInputMode=inline
@@ -2757,7 +2790,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="自定义弹射物"
+    //%group="行为/轨迹"
+    //%blockNamespace=弹射物
     //%blockId=stopcircular block="停止转圈 %p=variables_get(projectile)"
     export function stopcircular(sprite: Sprite){
         clearInterval((<wave>sprite).circlock);
@@ -2765,7 +2799,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="自定义弹射物"
+    //%group="行为/轨迹"
+    //%blockNamespace=弹射物
     //%blockId=circular block="转圈 %p=variables_get(projectile) ||半径%r 半径递增速率%v %t 时针 偏移速率%ov 偏移角度%oa"
     //%r.defl=30 v=0 t.defl=clockwise.p ov.defl=0 oa.defl=180
     //%inlineInputMode=inline
@@ -2803,7 +2838,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="自定义弹射物"
+    //%group="行为/轨迹"
+    //%blockNamespace=弹射物
     //%blockId=movetoxy block="移动 %sprite=variables_get(projectile) 在%time 秒内接近 位置x %desx y %desy"
     //%inlineInputMode=inline
     export function movetoxy (sprite: Sprite, time: number, desx: number, desy: number) {
@@ -2812,7 +2848,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="自定义弹射物"
+    //%group="行为/轨迹"
+    //%blockNamespace=弹射物
     //%blockId=movetox block="移动 %sprite=variables_get(projectile) 在%time 秒内接近 位置x %desx"
     //%inlineInputMode=inline
     export function movetox (sprite: Sprite, time: number, desx: number) {
@@ -2827,7 +2864,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="自定义弹射物"
+    //%group="行为/轨迹"
+    //%blockNamespace=弹射物
     //%blockId=movetoy block="移动 %sprite=variables_get(projectile) 在%time 秒内接近 位置y %desy"
     //%inlineInputMode=inline
     export function movetoy (sprite: Sprite, time: number, desy: number) {
@@ -2842,7 +2880,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="自定义弹射物"
+    //%group="行为/轨迹"
+    //%blockNamespace=弹射物
     //%blockId=movexy block="移动 %sprite=variables_get(projectile) 在%time 秒内移动 x %dx y %dy"
     //%inlineInputMode=inline
     export function movexy (sprite: Sprite, time: number, dx: number, dy: number) {
@@ -2855,7 +2894,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="自定义弹射物"
+    //%group="行为/轨迹"
+    //%blockNamespace=弹射物
     //%blockId=accelerateToV block="加速 %sprite=variables_get(projectile) 在%time 秒内加速 vx* %dx 倍 vy* %dy 倍"
     //%inlineInputMode=inline
     export function acceToV (sprite: Sprite, time: number, vx: number, vy: number) {
@@ -2876,7 +2916,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
     
     // 反击，防御状态被攻击才能发出
-    //%group="技能设置"
+    //%blockNamespace=技能 color="#B6392F"
+    //%group="特殊技能"
     //%blockId=counterAttack block="(反击) %p=variables_get(player) 尝试执行 消耗mp %mp"
     //%mp.defl=0
     //% topblock=false
@@ -2886,7 +2927,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     // 自动攻击，暂停控制，按[下]退出
-    //%group="技能设置"
+    //%blockNamespace=技能 color="#B6392F"
+    //%group="特殊技能"
     //%blockId=autoAttack block="(持续攻击) %p=variables_get(player) 每隔 %time 秒自动执行 消耗mp %mp"
     //%time.defl=0 mp.defl=0
     //%inlineInputMode=inline
@@ -2898,7 +2940,8 @@ function _runAnimation(name: string, loop: boolean = false){
 
 //=================== 人物动作 ===================
     //%block
-    //%group="人物动作"
+    //%blockNamespace=技能 color="#B6392F"
+    //%group="动作"
     //%blockId=attackAction block="攻击 %p=variables_get(player) %atk=atkKind ||持续 $time 秒"
     //%time.defl = 0
     //%inlineInputMode=inline
@@ -2939,7 +2982,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="人物动作"
+    //%blockNamespace=技能 color="#B6392F"
+    //%group="动作"
     //%blockId=jump block="起跳 %p=variables_get(player) ||竖直速度%vy 水平速度%vx"
     //%vy.defl=100 vx.defl=0
     //%weight=98
@@ -2963,7 +3007,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="人物动作"
+    //%blockNamespace=技能 color="#B6392F"
+    //%group="动作"
     //%blockId=run block="起跑 %p=variables_get(player) ||速度%speed"
     //%weighr=98
     //%speed.defl=80
@@ -2995,7 +3040,8 @@ function _runAnimation(name: string, loop: boolean = false){
         // }
     }
 
-    //%group="人物动作"
+    //%blockNamespace=技能 color="#B6392F"
+    //%group="动作"
     //%blockId=stop block="暂停控制 %p=variables_get(player) %time 秒"
     //%weighr=96
     //%speed.defl=1
@@ -3009,7 +3055,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="人物动作"
+    //%blockNamespace=技能 color="#B6392F"
+    //%group="动作"
     //%blockId=defent block="防御 %p=variables_get(player) %t 秒 ||防御系数 %k"
     //%t.defl=1 
     //%k.defl=0.5
@@ -3021,7 +3068,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="人物动作"
+    //%blockNamespace=技能 color="#B6392F"
+    //%group="动作"
     //%blockId=newPosture block="近身攻击 %p=variables_get(player) 摆出姿势 %img=screen_image_picker %t 秒 攻击部位(projectile) %atk=screen_image_picker "
     //%inlineInputMode=inline
     //%t.defl=0.3
@@ -3048,7 +3096,8 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //%group="人物动作"
+    //%blockNamespace=技能 color="#B6392F"
+    //%group="动作"
     //%blockId=turn block="%p=variables_get(player) 转向"
     //%weight=95
     export function turn(p: Character){
@@ -3067,9 +3116,11 @@ function _runAnimation(name: string, loop: boolean = false){
 
     //% block="延迟 $time 秒后执行"
     //% time.defl=0.5
-    //%group="人物动作"
-    //% handlerStatement=1
-    //% %time=timePicker ms"
+    //%blockNamespace=技能 color="#B6392F"
+    //%group="动作"
+    //%handlerStatement=1
+    //%time=timePicker ms"
+    //%weight=10
     export function after(time: number, thenDo: () => void) {
         setTimeout(thenDo, time*1000)
     }
@@ -3077,6 +3128,7 @@ function _runAnimation(name: string, loop: boolean = false){
 //=================== 自定义人物 ===================
 
     //%block
+    //%blockNamespace=人物 color="#6A6FEA"
     //%group="自定义人物"
     //%blockId=setPlayerStImage block="设置$p=variables_get(player) %k=stimgKind 姿势 $img=screen_image_picker"
     //%inlineInputMode=inline
@@ -3100,6 +3152,7 @@ function _runAnimation(name: string, loop: boolean = false){
         }
     }
     //%block
+    //%blockNamespace=人物 color="#6A6FEA"
     //%group="自定义人物"
     //%blockId=setPlayerAtkImage block="设置$p=variables_get(player) %k=atkimgKind 姿势 $img=screen_image_picker 攻击部位 %atk=screen_image_picker"
     //%inlineInputMode=inline
@@ -3126,6 +3179,7 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
+    //%blockNamespace=人物 color="#6A6FEA"
     //%group="自定义人物"
     //%blockId=setPlayerWalkImage block="设置$p=variables_get(player) %k=aniKind $img=animation_editor ||走路帧间隔%t ms"
     //%inlineInputMode=inline
@@ -3151,6 +3205,7 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
+    //%blockNamespace=人物 color="#6A6FEA"
     //%group="自定义人物"
     //%blockId=setAbility block="设置%p=variables_get(player) 属性 %k=abilityKind 为 %v"
     //%v.defl=0
@@ -3183,10 +3238,45 @@ function _runAnimation(name: string, loop: boolean = false){
     }
 
     //%block
-    //% group="人物参数"
+    //%blockNamespace=人物 color="#6A6FEA"
+    //% group="参数"
     //%blockId=dirRight block="%p=variables_get(player) 朝向右"
     export function dirRight(p: Character): boolean{
         return p.laspres == 2
+    }
+
+    //%block
+    //% group="参数"
+    //%blockNamespace=人物 color="#6A6FEA"
+    //%blockId=getHPMPXY
+    //%block="%p=variables_get(player) %k"
+    export function getHPMPXY(p: Character, k: HPMP){
+        if(k == HPMP.HP){
+            return p.hp
+        }
+        else if(k == HPMP.MP){
+            return p.mp
+        }
+        else if(k == HPMP.x){
+            return p.x
+        }
+        else {
+            return p.y
+        }
+    }
+
+    //%block
+    //% group="参数"
+    //%blockNamespace=人物 color="#6A6FEA"
+    //%blockId=getSprite
+    //%block="%p=variables_get(player) %k"
+    export function getSprite(p: Character, k: ME){
+        if(k == ME.M){
+            return p.mySprite
+        }
+        else {
+            return p.enemySprite
+        }
     }
 
 }

@@ -1,3 +1,4 @@
+namespace 开始游戏{}
 namespace playGame{
     export let characters :({character: myGame.myCharacter, name: string})[]
     let p1img = img`
@@ -206,6 +207,7 @@ namespace playGame{
     }
     //%block
     //%group="游戏初始化"
+    //%blockNamespace=开始游戏 color="#CCC190"
     //%blockId=characterMenus block="开始游戏"
     //%weight=99
     export function characterMenus(){

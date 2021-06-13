@@ -12,7 +12,8 @@
         "README.md",
         "assets.json",
         "mygame.ts",
-        "playGame.ts"
+        "playGame.ts",
+        "readme.ts"
     ],
     "testFiles": [
         "test.ts"
