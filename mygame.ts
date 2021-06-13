@@ -6,7 +6,7 @@ namespace SpriteKind {
 }
 //%icon="\uf007" color="#6A6FEA"
 namespace 人物{} //"\uf183" "\uf113"
-//%icon="\uf132" color="#B6392F"
+//%icon="\uf132" color="#B63C2F"
 namespace 技能{}//"\uf132" "\uf198" "\uf140" 
 //%icon="\uf135" color="#458FAA"
 namespace 弹射物{} //"#BCE1F0"
@@ -2281,6 +2281,7 @@ function _runAnimation(name: string, loop: boolean = false){
             this.statusbar = statusbars.create(50, 4, StatusBarKind.Health)
             this.statusbar.positionDirection(CollisionDirection.Top)
             this.statusbar.setOffsetPadding(-66666, 0)
+            this.statusbar.setColor(2, 13)
             this.mpbar = statusbars.create(50, 4, StatusBarKind.Health)
             this.mpbar.setColor(9, 5)
             this.mpbar.positionDirection(CollisionDirection.Top)
