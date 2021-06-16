@@ -588,8 +588,6 @@ namespace matchstickMen{
             })
         })
         //复制到这里为止
-
-        //要进入游戏测试，可以在'当开机时'使用PlayGame的'开始游戏'
     }
 }
 */
